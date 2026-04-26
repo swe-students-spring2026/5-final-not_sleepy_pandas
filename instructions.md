@@ -20,7 +20,7 @@ This is an open-ended exercise for you to show your mastery of software engineer
 Replace the contents of the [README.md](./README.md) file with a beautifully-formatted Markdown file including:
 
 - a plain-language **description** of your project, including:
-- [badges](https://docs.github.com/en/actions/monitoring-and-troubleshooting-workflows/adding-a-workflow-status-badge) at the top of the `README.md` file showing the result of the latest CI/CD of each subsystem.
+- [badges](https://docs.github.com/en/actions/monitoring-and-troubleshooting-workflows/adding-a-workflow-status-badge) at the top of the `README.md` file showing the result of the latest CI/CD of each custom subsystem.
 - links to the container images for each custom subsystem, hosted on [DockerHub](https://hub.docker.com).
 - the names of all teammates as links to their GitHub profiles.
 - instructions for how to configure and run all parts of your project for any developer on any platform - these instructions must work!
