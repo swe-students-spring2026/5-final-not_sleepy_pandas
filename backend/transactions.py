@@ -3,7 +3,7 @@
 from bson import ObjectId
 from flask import Blueprint, jsonify, request
 
-from app.db import get_collection, save_transaction
+from db import get_collection, save_transaction
 
 
 transactions_bp = Blueprint("transactions", __name__)
