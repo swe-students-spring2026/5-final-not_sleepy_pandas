@@ -1,20 +1,28 @@
+"""Main Flask application for the PennyWise backend API."""
+
 from flask import Flask
-from auth import auth_bp
+
 from transactions import transactions_bp
 
+
 def create_app():
-    app = Flask(__name__)
+    """
+    Create and configure the Flask app.
+    """
+    flask_app = Flask(__name__)
 
-    app.register_blueprint(auth_bp, url_prefix="/api/auth")
-    app.register_blueprint(transactions_bp, url_prefix="/api/transactions")
+    flask_app.register_blueprint(transactions_bp, url_prefix="/api/transactions")
 
-    @app.route("/health")
+    @flask_app.route("/health", methods=["GET"])
     def health():
         return {"status": "ok"}
 
-    return app
+    return flask_app
+
 
 app = create_app()
 
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
+    
