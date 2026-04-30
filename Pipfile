@@ -10,6 +10,9 @@ flask-pymongo = "*"
 python-dotenv = "*"
 bcrypt = "*"
 flask-jwt-extended = "*"
+pytest-cov = "*"
+numpy = "*"
+pandas = "*"
 
 [dev-packages]
 black = "*"

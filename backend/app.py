@@ -2,6 +2,7 @@
 
 from flask import Flask
 
+from backend.analytics import analytics_bp
 from backend.transactions import transactions_bp
 
 
@@ -12,6 +13,7 @@ def create_app():
     flask_app = Flask(__name__)
 
     flask_app.register_blueprint(transactions_bp, url_prefix="/api/transactions")
+    flask_app.register_blueprint(analytics_bp, url_prefix="/api/analytics")
 
     @flask_app.route("/health", methods=["GET"])
     def health():
