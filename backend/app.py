@@ -3,6 +3,8 @@
 from flask import Flask
 
 from backend.analytics import analytics_bp
+from backend.auth import auth_bp
+from backend.budgets import budgets_bp
 from backend.transactions import transactions_bp
 
 
@@ -14,6 +16,8 @@ def create_app():
 
     flask_app.register_blueprint(transactions_bp, url_prefix="/api/transactions")
     flask_app.register_blueprint(analytics_bp, url_prefix="/api/analytics")
+    flask_app.register_blueprint(auth_bp, url_prefix="/api/auth")
+    flask_app.register_blueprint(budgets_bp, url_prefix="/api/budgets")
 
     @flask_app.route("/health", methods=["GET"])
     def health():

@@ -91,7 +91,7 @@ def test_register_bad_json(monkeypatch):
     monkeypatch.setattr("backend.auth.get_users_collection", lambda: fake)
 
     client = _app().test_client()
-    resp = client.post("/api/auth/register", data="not-json", content_type="text/plain")
+    resp = client.post("/api/auth/register", data="not-json", content_type="application/json")
     assert resp.status_code == 400
 
 
@@ -153,5 +153,5 @@ def test_login_bad_json(monkeypatch):
     monkeypatch.setattr("backend.auth.get_users_collection", lambda: fake)
 
     client = _app().test_client()
-    resp = client.post("/api/auth/login", data="bad", content_type="text/plain")
+    resp = client.post("/api/auth/login", data="bad", content_type="application/json")
     assert resp.status_code == 400
