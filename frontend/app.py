@@ -12,6 +12,15 @@ from api_client import BackendClient
 load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
 
+def _flash_error(resp, fallback: str) -> None:
+    """Flash the backend's error message, or fallback if the body isn't JSON."""
+    try:
+        msg = resp.json().get("error", fallback)
+    except Exception:
+        msg = f"{fallback} (HTTP {resp.status_code})"
+    flash(msg, "danger")
+
+
 def create_app(backend: BackendClient | None = None):
     app = Flask(__name__)
     app.secret_key = os.getenv("FLASK_SECRET", "dev-frontend-secret")
@@ -50,7 +59,7 @@ def create_app(backend: BackendClient | None = None):
                 session["username"] = request.form["username"]
                 return redirect(url_for("dashboard"))
 
-            flash(resp.json().get("error", "Login failed"), "danger")
+            _flash_error(resp, "Login failed")
         return render_template("login.html")
 
     @app.route("/register", methods=["GET", "POST"])
@@ -70,7 +79,7 @@ def create_app(backend: BackendClient | None = None):
                 flash("Account created! Please log in.", "success")
                 return redirect(url_for("login"))
 
-            flash(resp.json().get("error", "Registration failed"), "danger")
+            _flash_error(resp, "Registration failed")
         return render_template("register.html")
 
     @app.route("/logout")
@@ -108,7 +117,7 @@ def create_app(backend: BackendClient | None = None):
                 if resp.status_code == 201:
                     flash("Transaction added.", "success")
                 else:
-                    flash(resp.json().get("error", "Failed to add transaction"), "danger")
+                    _flash_error(resp, "Failed to add transaction")
             except requests.exceptions.RequestException:
                 flash("Cannot reach backend service.", "danger")
             return redirect(url_for("transactions"))
@@ -116,7 +125,7 @@ def create_app(backend: BackendClient | None = None):
         try:
             resp = api.list_transactions(session["token"])
             items = resp.json().get("transactions", [])
-        except requests.exceptions.RequestException:
+        except (requests.exceptions.RequestException, ValueError):
             items = []
 
         return render_template("transactions.html", transactions=items)
@@ -146,7 +155,7 @@ def create_app(backend: BackendClient | None = None):
                 if resp.status_code == 201:
                     flash("Budget created.", "success")
                 else:
-                    flash(resp.json().get("error", "Failed to create budget"), "danger")
+                    _flash_error(resp, "Failed to create budget")
             except requests.exceptions.RequestException:
                 flash("Cannot reach backend service.", "danger")
             return redirect(url_for("budgets"))
@@ -154,7 +163,7 @@ def create_app(backend: BackendClient | None = None):
         try:
             status_resp = api.list_budget_status(session["token"])
             status = status_resp.json().get("status", [])
-        except requests.exceptions.RequestException:
+        except (requests.exceptions.RequestException, ValueError):
             status = []
 
         return render_template("budgets.html", budgets=status)
