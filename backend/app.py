@@ -1,5 +1,7 @@
 """Main Flask application for the PennyWise backend API."""
 
+import os
+
 from flask import Flask
 
 from backend.analytics import analytics_bp
@@ -30,5 +32,6 @@ app = create_app()
 
 
 if __name__ == "__main__":  # pragma: no cover
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    port = int(os.getenv("PORT", 5001))
+    app.run(host="0.0.0.0", port=port, debug=True)
     
