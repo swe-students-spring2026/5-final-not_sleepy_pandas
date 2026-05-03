@@ -10,16 +10,21 @@ from backend.config import (
 )
 
 def get_collection():
-    """
-    Get the MongoDB collection for transactions.
-
-    Returns:
-        The MongoDB collection object.
-    """
     client = MongoClient(MONGO_URI)
     db = client[MONGO_DB_NAME]
-    collection = db[MONGO_COLLECTION_NAME]
-    return collection
+    return db[MONGO_COLLECTION_NAME]
+
+
+def get_users_collection():
+    client = MongoClient(MONGO_URI)
+    db = client[MONGO_DB_NAME]
+    return db["users"]
+
+
+def get_budgets_collection():
+    client = MongoClient(MONGO_URI)
+    db = client[MONGO_DB_NAME]
+    return db["budgets"]
 
 def get_budgets_collection():
     """Get the MongoDB collection for budgets."""
