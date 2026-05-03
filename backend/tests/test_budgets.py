@@ -31,7 +31,9 @@ class FakeBudgetsCollection:
             "created_at": "2026-04-01T00:00:00",
         }
 
-    def find(self):
+    def find(self, query=None):
+        if query and query.get("month") and query["month"] != self._doc["month"]:
+            return []
         return [dict(self._doc)]
 
     def find_one(self, query):
@@ -102,7 +104,7 @@ def test_create_budget_invalid_limit(monkeypatch):
 
 def test_create_budget_bad_json(monkeypatch):
     _patch(monkeypatch)
-    resp = _app().test_client().post("/api/budgets", data="bad", content_type="text/plain")
+    resp = _app().test_client().post("/api/budgets", data="not-json", content_type="application/json")
     assert resp.status_code == 400
 
 
@@ -166,7 +168,7 @@ def test_update_budget_invalid_limit(monkeypatch):
 def test_update_budget_bad_json(monkeypatch):
     fake = _patch(monkeypatch)
     resp = _app().test_client().put(
-        f"/api/budgets/{fake._oid}", data="bad", content_type="text/plain"
+        f"/api/budgets/{fake._oid}", data="not-json", content_type="application/json"
     )
     assert resp.status_code == 400
 
@@ -204,7 +206,7 @@ def test_budget_status(monkeypatch):
 
 def test_budget_status_empty(monkeypatch):
     class EmptyBudgets:
-        def find(self):
+        def find(self, query=None):
             return []
 
     monkeypatch.setattr("backend.budgets.get_budgets_collection", lambda: EmptyBudgets())
@@ -224,3 +226,157 @@ def test_budget_status_over_budget(monkeypatch):
     row = resp.get_json()["status"][0]
     assert row["over_budget"] is True
     assert row["remaining"] == -200.0
+
+
+def test_budget_status_with_month_filter(monkeypatch):
+    # Targeted pipeline returns category as the _id (not a nested month+category dict)
+    class MonthScopedTransactions:
+        def aggregate(self, pipeline):
+            return [{"_id": "food", "total_spent": 120.0}]
+
+    _patch(monkeypatch, transactions=MonthScopedTransactions())
+    resp = _app().test_client().get("/api/budgets/status?month=2026-04")
+    data = resp.get_json()
+    assert resp.status_code == 200
+    row = data["status"][0]
+    assert row["category"] == "food"
+    assert row["spent"] == 120.0
+    assert row["remaining"] == 180.0
+    assert row["over_budget"] is False
+
+
+def test_budget_status_month_no_matching_budgets(monkeypatch):
+    _patch(monkeypatch)
+    # Requesting a month that has no budgets stored
+    resp = _app().test_client().get("/api/budgets/status?month=2025-01")
+    assert resp.status_code == 200
+    assert resp.get_json()["status"] == []
+
+
+def test_budget_status_invalid_month_format(monkeypatch):
+    _patch(monkeypatch)
+    resp = _app().test_client().get("/api/budgets/status?month=April-2026")
+    assert resp.status_code == 400
+    assert "YYYY-MM" in resp.get_json()["error"]
+
+
+# --- coverage gap: non-dict JSON bodies ---
+
+def test_create_budget_json_array(monkeypatch):
+    # Valid JSON but not a dict — hits the isinstance check on line 27
+    _patch(monkeypatch)
+    resp = _app().test_client().post("/api/budgets", json=[1, 2, 3])
+    assert resp.status_code == 400
+    assert "JSON" in resp.get_json()["error"]
+
+
+def test_update_budget_json_array(monkeypatch):
+    # Valid JSON but not a dict — hits the isinstance check in update_budget
+    fake = _patch(monkeypatch)
+    resp = _app().test_client().put(f"/api/budgets/{fake._oid}", json=[1, 2, 3])
+    assert resp.status_code == 400
+    assert "JSON" in resp.get_json()["error"]
+
+
+# --- coverage gap: update_budget missing id / missing fields ---
+
+def test_update_budget_invalid_id(monkeypatch):
+    _patch(monkeypatch)
+    resp = _app().test_client().put(
+        "/api/budgets/not-an-objectid",
+        json={"category": "food", "limit": 100, "month": "2026-04"},
+    )
+    assert resp.status_code == 400
+    assert "Invalid budget id" in resp.get_json()["error"]
+
+
+def test_update_budget_missing_field(monkeypatch):
+    fake = _patch(monkeypatch)
+    resp = _app().test_client().put(
+        f"/api/budgets/{fake._oid}",
+        json={"category": "food", "limit": 100},  # missing "month"
+    )
+    assert resp.status_code == 400
+    assert "Missing required field" in resp.get_json()["error"]
+
+
+# --- additional edge-case tests ---
+
+def test_create_budget_null_field(monkeypatch):
+    _patch(monkeypatch)
+    resp = _app().test_client().post(
+        "/api/budgets",
+        json={"category": None, "limit": 100, "month": "2026-04"},
+    )
+    assert resp.status_code == 400
+    assert "Missing required field" in resp.get_json()["error"]
+
+
+def test_create_budget_empty_string_field(monkeypatch):
+    _patch(monkeypatch)
+    resp = _app().test_client().post(
+        "/api/budgets",
+        json={"category": "", "limit": 100, "month": "2026-04"},
+    )
+    assert resp.status_code == 400
+    assert "Missing required field" in resp.get_json()["error"]
+
+
+def test_create_budget_limit_is_string(monkeypatch):
+    _patch(monkeypatch)
+    resp = _app().test_client().post(
+        "/api/budgets",
+        json={"category": "food", "limit": "lots", "month": "2026-04"},
+    )
+    assert resp.status_code == 400
+    assert "positive" in resp.get_json()["error"]
+
+
+def test_get_budgets_empty(monkeypatch):
+    class EmptyBudgets:
+        def find(self, query=None):
+            return []
+
+    monkeypatch.setattr("backend.budgets.get_budgets_collection", lambda: EmptyBudgets())
+    resp = _app().test_client().get("/api/budgets")
+    assert resp.status_code == 200
+    assert resp.get_json()["budgets"] == []
+
+
+def test_budget_status_no_spending(monkeypatch):
+    # Budget exists but no transactions match — spent should default to 0
+    class NoTransactions:
+        def aggregate(self, pipeline):
+            return []
+
+    _patch(monkeypatch, transactions=NoTransactions())
+    resp = _app().test_client().get("/api/budgets/status")
+    row = resp.get_json()["status"][0]
+    assert row["spent"] == 0.0
+    assert row["remaining"] == 300.0
+    assert row["over_budget"] is False
+
+
+def test_budget_status_month_filter_no_spending(monkeypatch):
+    # Month-scoped query with no matching transactions — spent defaults to 0
+    class NoTransactions:
+        def aggregate(self, pipeline):
+            return []
+
+    _patch(monkeypatch, transactions=NoTransactions())
+    resp = _app().test_client().get("/api/budgets/status?month=2026-04")
+    row = resp.get_json()["status"][0]
+    assert row["spent"] == 0.0
+    assert row["remaining"] == 300.0
+
+
+def test_budget_status_month_filter_over_budget(monkeypatch):
+    class OverSpentMonth:
+        def aggregate(self, pipeline):
+            return [{"_id": "food", "total_spent": 450.0}]
+
+    _patch(monkeypatch, transactions=OverSpentMonth())
+    resp = _app().test_client().get("/api/budgets/status?month=2026-04")
+    row = resp.get_json()["status"][0]
+    assert row["over_budget"] is True
+    assert row["remaining"] == -150.0

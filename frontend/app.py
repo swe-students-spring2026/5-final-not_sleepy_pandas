@@ -7,15 +7,25 @@ from pathlib import Path
 import requests
 from dotenv import load_dotenv
 from flask import Flask, flash, redirect, render_template, request, session, url_for
+from api_client import BackendClient
 
 load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
-BACKEND_URL = os.getenv("BACKEND_URL", "http://backend:5000")
+
+def _flash_error(resp, fallback: str) -> None:
+    """Flash the backend's error message, or fallback if the body isn't JSON."""
+    try:
+        msg = resp.json().get("error", fallback)
+    except Exception:
+        msg = f"{fallback} (HTTP {resp.status_code})"
+    flash(msg, "danger")
 
 
-def create_app():
+def create_app(backend: BackendClient | None = None):
     app = Flask(__name__)
     app.secret_key = os.getenv("FLASK_SECRET", "dev-frontend-secret")
+    api = backend or BackendClient()
+
 
     def login_required(f):
         @wraps(f)
@@ -24,9 +34,6 @@ def create_app():
                 return redirect(url_for("login"))
             return f(*args, **kwargs)
         return decorated
-
-    def _headers():
-        return {"Authorization": f"Bearer {session.get('token', '')}"}
 
     # ------------------------------------------------------------------ auth
 
@@ -39,9 +46,8 @@ def create_app():
     @app.route("/login", methods=["GET", "POST"])
     def login():
         if request.method == "POST":
-            payload = {"username": request.form["username"], "password": request.form["password"]}
             try:
-                resp = requests.post(f"{BACKEND_URL}/api/auth/login", json=payload, timeout=5)
+                resp = api.login(request.form["username"], request.form["password"])
             except requests.exceptions.RequestException:
                 flash("Cannot reach backend service.", "danger")
                 return render_template("login.html")
@@ -53,19 +59,18 @@ def create_app():
                 session["username"] = request.form["username"]
                 return redirect(url_for("dashboard"))
 
-            flash(resp.json().get("error", "Login failed"), "danger")
+            _flash_error(resp, "Login failed")
         return render_template("login.html")
 
     @app.route("/register", methods=["GET", "POST"])
     def register():
         if request.method == "POST":
-            payload = {
-                "username": request.form["username"],
-                "password": request.form["password"],
-                "email": request.form.get("email", ""),
-            }
             try:
-                resp = requests.post(f"{BACKEND_URL}/api/auth/register", json=payload, timeout=5)
+                resp = api.register(
+                    request.form["username"],
+                    request.form["password"],
+                    request.form.get("email", ""),
+                )
             except requests.exceptions.RequestException:
                 flash("Cannot reach backend service.", "danger")
                 return render_template("register.html")
@@ -74,7 +79,7 @@ def create_app():
                 flash("Account created! Please log in.", "success")
                 return redirect(url_for("login"))
 
-            flash(resp.json().get("error", "Registration failed"), "danger")
+            _flash_error(resp, "Registration failed")
         return render_template("register.html")
 
     @app.route("/logout")
@@ -88,12 +93,7 @@ def create_app():
     @login_required
     def dashboard():
         try:
-            summary_resp = requests.get(f"{BACKEND_URL}/api/analytics/monthly-summary", headers=_headers(), timeout=5)
-            trends_resp = requests.get(f"{BACKEND_URL}/api/analytics/spending-trends", headers=_headers(), timeout=5)
-            cats_resp = requests.get(f"{BACKEND_URL}/api/analytics/top-categories", headers=_headers(), timeout=5)
-            monthly = summary_resp.json().get("monthly_summary", [])
-            trends = trends_resp.json().get("spending_trends", [])
-            categories = cats_resp.json().get("top_categories", [])
+             monthly, trends, categories = api.fetch_dashboard_series(session["token"])
         except requests.exceptions.RequestException:
             monthly, trends, categories = [], [], []
 
@@ -113,19 +113,19 @@ def create_app():
                 "date": request.form["date"],
             }
             try:
-                resp = requests.post(f"{BACKEND_URL}/api/transactions", json=payload, headers=_headers(), timeout=5)
+                resp = api.create_transaction(session["token"], payload)
                 if resp.status_code == 201:
                     flash("Transaction added.", "success")
                 else:
-                    flash(resp.json().get("error", "Failed to add transaction"), "danger")
+                    _flash_error(resp, "Failed to add transaction")
             except requests.exceptions.RequestException:
                 flash("Cannot reach backend service.", "danger")
             return redirect(url_for("transactions"))
 
         try:
-            resp = requests.get(f"{BACKEND_URL}/api/transactions", headers=_headers(), timeout=5)
+            resp = api.list_transactions(session["token"])
             items = resp.json().get("transactions", [])
-        except requests.exceptions.RequestException:
+        except (requests.exceptions.RequestException, ValueError):
             items = []
 
         return render_template("transactions.html", transactions=items)
@@ -134,7 +134,7 @@ def create_app():
     @login_required
     def delete_transaction(tid):
         try:
-            requests.delete(f"{BACKEND_URL}/api/transactions/{tid}", headers=_headers(), timeout=5)
+            api.delete_transaction(session["token"], tid)
         except requests.exceptions.RequestException:
             flash("Cannot reach backend service.", "danger")
         return redirect(url_for("transactions"))
@@ -151,19 +151,19 @@ def create_app():
                 "month": request.form["month"],
             }
             try:
-                resp = requests.post(f"{BACKEND_URL}/api/budgets", json=payload, headers=_headers(), timeout=5)
+                resp = api.create_budget(session["token"], payload)
                 if resp.status_code == 201:
                     flash("Budget created.", "success")
                 else:
-                    flash(resp.json().get("error", "Failed to create budget"), "danger")
+                    _flash_error(resp, "Failed to create budget")
             except requests.exceptions.RequestException:
                 flash("Cannot reach backend service.", "danger")
             return redirect(url_for("budgets"))
 
         try:
-            status_resp = requests.get(f"{BACKEND_URL}/api/budgets/status", headers=_headers(), timeout=5)
+            status_resp = api.list_budget_status(session["token"])
             status = status_resp.json().get("status", [])
-        except requests.exceptions.RequestException:
+        except (requests.exceptions.RequestException, ValueError):
             status = []
 
         return render_template("budgets.html", budgets=status)
@@ -172,7 +172,7 @@ def create_app():
     @login_required
     def delete_budget(bid):
         try:
-            requests.delete(f"{BACKEND_URL}/api/budgets/{bid}", headers=_headers(), timeout=5)
+            api.delete_budget(session["token"], bid)
         except requests.exceptions.RequestException:
             flash("Cannot reach backend service.", "danger")
         return redirect(url_for("budgets"))

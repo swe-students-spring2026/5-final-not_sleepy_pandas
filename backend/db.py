@@ -1,7 +1,13 @@
 """Database helpers for accessing MongoDB collections."""
 
 from pymongo import MongoClient
-from backend.config import MONGO_URI, MONGO_DB_NAME, MONGO_COLLECTION_NAME
+from backend.config import (
+    MONGO_URI,
+    MONGO_DB_NAME,
+    MONGO_COLLECTION_NAME,
+    BUDGETS_COLLECTION_NAME,
+    USERS_COLLECTION_NAME,
+)
 
 def get_collection():
     client = MongoClient(MONGO_URI)
@@ -19,6 +25,18 @@ def get_budgets_collection():
     client = MongoClient(MONGO_URI)
     db = client[MONGO_DB_NAME]
     return db["budgets"]
+
+def get_budgets_collection():
+    """Get the MongoDB collection for budgets."""
+    client = MongoClient(MONGO_URI)
+    return client[MONGO_DB_NAME][BUDGETS_COLLECTION_NAME]
+
+
+def get_users_collection():
+    """Get the MongoDB collection for users."""
+    client = MongoClient(MONGO_URI)
+    return client[MONGO_DB_NAME][USERS_COLLECTION_NAME]
+
 
 def save_transaction(transaction: dict):
     """

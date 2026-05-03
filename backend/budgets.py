@@ -1,9 +1,12 @@
 """Budget endpoints — CRUD and spending-vs-limit status."""
 
 import datetime
+import re
 
 from bson import ObjectId
 from flask import Blueprint, jsonify, request
+
+_MONTH_RE = re.compile(r"^\d{4}-\d{2}$")
 
 from backend.db import get_budgets_collection, get_collection
 
@@ -104,40 +107,56 @@ def delete_budget(budget_id):
 
 @budgets_bp.route("/status", methods=["GET"])
 def budget_status():
-    """Compare actual spending against each budget limit for its month."""
-    budgets = get_budgets_collection()
-    transactions = get_collection()
+    """Compare actual spending against each budget limit for its month.
 
-    all_budgets = list(budgets.find())
+    Optional query parameter ?month=YYYY-MM narrows both the budget lookup and
+    the aggregation pipeline to a single month, avoiding a full-collection scan.
+    """
+    month = request.args.get("month")
+    if month and not _MONTH_RE.match(month):
+        return jsonify({"error": "month must be in YYYY-MM format"}), 400
+
+    budgets_col = get_budgets_collection()
+    transactions_col = get_collection()
+
+    budget_query = {"month": month} if month else {}
+    all_budgets = list(budgets_col.find(budget_query))
     if not all_budgets:
         return jsonify({"status": []}), 200
 
-    # Build a lookup: (month, category) -> total spent
-    pipeline = [
-        {"$match": {"type": "expense"}},
-        {
-            "$project": {
-                "category": 1,
-                "amount": 1,
-                "month": {"$substr": ["$date", 0, 7]},
-            }
-        },
-        {
-            "$group": {
-                "_id": {"month": "$month", "category": "$category"},
-                "total_spent": {"$sum": "$amount"},
-            }
-        },
-    ]
-    spent_map = {}
-    for row in transactions.aggregate(pipeline):
-        key = (row["_id"]["month"], row["_id"]["category"])
-        spent_map[key] = row["total_spent"]
+    if month:
+        # Targeted pipeline: restrict to the requested month before grouping so
+        # MongoDB can use a date-prefix index and skip unrelated documents.
+        pipeline = [
+            {"$match": {"type": "expense", "date": {"$regex": f"^{month}"}}},
+            {"$group": {"_id": "$category", "total_spent": {"$sum": "$amount"}}},
+        ]
+        spent_map = {row["_id"]: row["total_spent"] for row in transactions_col.aggregate(pipeline)}
+    else:
+        pipeline = [
+            {"$match": {"type": "expense"}},
+            {
+                "$project": {
+                    "category": 1,
+                    "amount": 1,
+                    "month": {"$substr": ["$date", 0, 7]},
+                }
+            },
+            {
+                "$group": {
+                    "_id": {"month": "$month", "category": "$category"},
+                    "total_spent": {"$sum": "$amount"},
+                }
+            },
+        ]
+        spent_map = {}
+        for row in transactions_col.aggregate(pipeline):
+            key = (row["_id"]["month"], row["_id"]["category"])
+            spent_map[key] = row["total_spent"]
 
     result = []
     for b in all_budgets:
-        key = (b["month"], b["category"])
-        spent = spent_map.get(key, 0.0)
+        spent = spent_map.get(b["category"] if month else (b["month"], b["category"]), 0.0)
         limit = b["limit"]
         result.append(
             {

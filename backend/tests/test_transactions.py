@@ -253,3 +253,92 @@ def test_delete_transaction_invalid_id():
 
     assert response.status_code == 400
     assert response.get_json()["error"] == "Invalid transaction id"
+
+
+def test_create_transaction_json_array():
+    resp = create_app().test_client().post("/api/transactions", json=[1, 2, 3])
+    assert resp.status_code == 400
+    assert "JSON" in resp.get_json()["error"]
+
+
+def test_get_transaction_invalid_id():
+    resp = create_app().test_client().get("/api/transactions/not-an-objectid")
+    assert resp.status_code == 400
+    assert "Invalid" in resp.get_json()["error"]
+
+
+def test_get_transaction_not_found(monkeypatch):
+    fake = FakeCollection()
+    monkeypatch.setattr("backend.transactions.get_collection", lambda: fake)
+    resp = create_app().test_client().get(f"/api/transactions/{ObjectId()}")
+    assert resp.status_code == 404
+    assert "not found" in resp.get_json()["error"].lower()
+
+
+def test_update_transaction_invalid_id():
+    resp = create_app().test_client().put(
+        "/api/transactions/bad-id",
+        json={"type": "expense", "amount": 10, "category": "food", "date": "2026-04-01"},
+    )
+    assert resp.status_code == 400
+    assert "Invalid" in resp.get_json()["error"]
+
+
+def test_update_transaction_json_array(monkeypatch):
+    fake = FakeCollection()
+    monkeypatch.setattr("backend.transactions.get_collection", lambda: fake)
+    resp = create_app().test_client().put(f"/api/transactions/{fake.record_id}", json=[1, 2])
+    assert resp.status_code == 400
+    assert "JSON" in resp.get_json()["error"]
+
+
+def test_update_transaction_missing_field(monkeypatch):
+    fake = FakeCollection()
+    monkeypatch.setattr("backend.transactions.get_collection", lambda: fake)
+    resp = create_app().test_client().put(
+        f"/api/transactions/{fake.record_id}",
+        json={"type": "expense", "amount": 10, "category": "food"},  # missing date
+    )
+    assert resp.status_code == 400
+    assert "Missing required field" in resp.get_json()["error"]
+
+
+def test_update_transaction_invalid_type(monkeypatch):
+    fake = FakeCollection()
+    monkeypatch.setattr("backend.transactions.get_collection", lambda: fake)
+    resp = create_app().test_client().put(
+        f"/api/transactions/{fake.record_id}",
+        json={"type": "shopping", "amount": 10, "category": "food", "date": "2026-04-01"},
+    )
+    assert resp.status_code == 400
+    assert "type must be income or expense" in resp.get_json()["error"]
+
+
+def test_update_transaction_invalid_amount(monkeypatch):
+    fake = FakeCollection()
+    monkeypatch.setattr("backend.transactions.get_collection", lambda: fake)
+    resp = create_app().test_client().put(
+        f"/api/transactions/{fake.record_id}",
+        json={"type": "expense", "amount": 0, "category": "food", "date": "2026-04-01"},
+    )
+    assert resp.status_code == 400
+    assert "positive" in resp.get_json()["error"]
+
+
+def test_update_transaction_not_found(monkeypatch):
+    fake = FakeCollection()
+    monkeypatch.setattr("backend.transactions.get_collection", lambda: fake)
+    resp = create_app().test_client().put(
+        f"/api/transactions/{ObjectId()}",
+        json={"type": "expense", "amount": 10, "category": "food", "date": "2026-04-01"},
+    )
+    assert resp.status_code == 404
+    assert "not found" in resp.get_json()["error"].lower()
+
+
+def test_delete_transaction_not_found(monkeypatch):
+    fake = FakeCollection()
+    monkeypatch.setattr("backend.transactions.get_collection", lambda: fake)
+    resp = create_app().test_client().delete(f"/api/transactions/{ObjectId()}")
+    assert resp.status_code == 404
+    assert "not found" in resp.get_json()["error"].lower()
