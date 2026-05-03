@@ -27,7 +27,7 @@ services:
       MONGO_DB_NAME: ${MONGO_DB_NAME:-pennywise}
       JWT_SECRET: ${JWT_SECRET:-dev-secret-change-in-prod}
     ports:
-      - "5000:5000"
+      - "5001:5000"
     depends_on:
       mongodb:
         condition: service_healthy
