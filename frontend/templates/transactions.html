@@ -2,72 +2,100 @@
 {% block title %} — Transactions{% endblock %}
 
 {% block content %}
-<div class="row">
-  <!-- Add form -->
-  <div class="col-md-4 mb-4">
-    <div class="card shadow-sm">
-      <div class="card-header fw-semibold">Add Transaction</div>
-      <div class="card-body">
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-end gap-2 mb-4">
+  <div>
+    <h1 class="pw-page-title h3 mb-1">Transactions</h1>
+    <p class="pw-page-sub mb-0 small">New entries are saved through the API into MongoDB and show up here immediately after refresh.</p>
+  </div>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-4">
+    <div class="card pw-card h-100">
+      <div class="card-header pw-card-header border-0">Add transaction</div>
+      <div class="card-body pw-card-body">
         <form method="POST">
-          <div class="mb-2">
-            <label class="form-label">Type</label>
-            <select name="type" class="form-select" required>
+          <div class="mb-3">
+            <label class="form-label fw-medium" for="tx-type">Type</label>
+            <select id="tx-type" name="type" class="form-select" required>
               <option value="expense">Expense</option>
               <option value="income">Income</option>
             </select>
           </div>
-          <div class="mb-2">
-            <label class="form-label">Amount ($)</label>
-            <input type="number" step="0.01" min="0.01" name="amount" class="form-control" required />
-          </div>
-          <div class="mb-2">
-            <label class="form-label">Category</label>
-            <input type="text" name="category" class="form-control" required placeholder="e.g. food" />
-          </div>
-          <div class="mb-2">
-            <label class="form-label">Description</label>
-            <input type="text" name="description" class="form-control" placeholder="optional" />
+          <div class="mb-3">
+            <label class="form-label fw-medium" for="tx-amount">Amount ($)</label>
+            <input id="tx-amount" type="number" step="0.01" min="0.01" name="amount" class="form-control" required placeholder="0.00" />
           </div>
           <div class="mb-3">
-            <label class="form-label">Date</label>
-            <input type="date" name="date" class="form-control" required />
+            <label class="form-label fw-medium" for="tx-category">Category</label>
+            <input id="tx-category" type="text" name="category" class="form-control" required placeholder="e.g. groceries" />
           </div>
-          <button type="submit" class="btn btn-primary w-100">Add</button>
+          <div class="mb-3">
+            <label class="form-label fw-medium" for="tx-desc">Description</label>
+            <input id="tx-desc" type="text" name="description" class="form-control" placeholder="Optional note" />
+          </div>
+          <div class="mb-4">
+            <label class="form-label fw-medium" for="tx-date">Date</label>
+            <input id="tx-date" type="date" name="date" class="form-control" required />
+          </div>
+          <button type="submit" class="btn w-100 text-white pw-btn-primary-gradient">Save transaction</button>
         </form>
       </div>
     </div>
   </div>
 
-  <!-- List -->
-  <div class="col-md-8">
-    <h4>All Transactions</h4>
-    {% if transactions %}
-    <table class="table table-hover table-bordered">
-      <thead class="table-dark">
-        <tr><th>Date</th><th>Type</th><th>Category</th><th>Amount</th><th>Description</th><th></th></tr>
-      </thead>
-      <tbody>
-      {% for t in transactions %}
-      <tr>
-        <td>{{ t.date }}</td>
-        <td>
-          <span class="badge {{ 'bg-success' if t.type == 'income' else 'bg-danger' }}">{{ t.type }}</span>
-        </td>
-        <td>{{ t.category }}</td>
-        <td>${{ "%.2f"|format(t.amount) }}</td>
-        <td>{{ t.description }}</td>
-        <td>
-          <form method="POST" action="{{ url_for('delete_transaction', tid=t._id) }}" style="display:inline">
-            <button class="btn btn-sm btn-outline-danger">Delete</button>
-          </form>
-        </td>
-      </tr>
-      {% endfor %}
-      </tbody>
-    </table>
-    {% else %}
-    <p class="text-muted">No transactions yet.</p>
-    {% endif %}
+  <div class="col-lg-8">
+    <div class="card pw-card">
+      <div class="card-header pw-card-header border-0 d-flex justify-content-between align-items-center">
+        <span>All transactions</span>
+        {% if transactions %}
+        <span class="badge rounded-pill text-bg-light text-secondary fw-normal">{{ transactions|length }} total</span>
+        {% endif %}
+      </div>
+      <div class="card-body pw-card-body p-0">
+        {% if transactions %}
+        <div class="table-responsive">
+          <table class="table pw-table mb-0">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Type</th>
+                <th>Category</th>
+                <th class="text-end">Amount</th>
+                <th>Description</th>
+                <th class="text-end pe-3">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+            {% for t in transactions %}
+            <tr>
+              <td class="text-nowrap">{{ t.date }}</td>
+              <td>
+                <span class="badge rounded-pill {{ 'text-bg-success' if t.type == 'income' else 'text-bg-danger' }}">{{ t.type }}</span>
+              </td>
+              <td class="fw-medium text-capitalize">{{ t.category }}</td>
+              <td class="text-end fw-semibold">${{ "%.2f"|format(t.amount) }}</td>
+              <td class="text-secondary small">{{ t.description or "—" }}</td>
+              <td class="text-end pe-3">
+                <form method="POST" action="{{ url_for('delete_transaction', tid=t._id) }}" class="d-inline" onsubmit="return confirm('Remove this transaction?');">
+                  <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill">Delete</button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="p-4 p-md-5">
+          <div class="pw-empty mb-0">
+            <p class="mb-1"><strong>No rows yet.</strong></p>
+            <p class="mb-0 small">Use the form on the left or seed the database — the list calls <code class="small">GET /api/transactions</code>.</p>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
   </div>
 </div>
 {% endblock %}

@@ -1,25 +1,38 @@
 {% extends "base.html" %}
-{% block title %} — Login{% endblock %}
+{% block title %} — Sign in{% endblock %}
+{% block body_class %}pw-auth-layout{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-  <div class="col-md-4">
-    <div class="card shadow-sm">
-      <div class="card-body p-4">
-        <h2 class="card-title text-center mb-4">Sign In</h2>
-        <form method="POST">
+<div class="row justify-content-center align-items-center w-100 mw-100 m-0">
+  <div class="col-md-11 col-lg-10 col-xl-8">
+    <div class="row g-4 g-lg-5 align-items-center shadow-lg rounded-4 overflow-hidden bg-white mw-100 m-0">
+      <div class="col-lg-5 d-none d-lg-flex flex-column justify-content-center text-white px-5 py-5 pw-auth-sidebar">
+        <div class="pw-auth-badge-lg mb-4">◇</div>
+        <h1 class="h3 fw-bold mb-3">Welcome back</h1>
+        <p class="mb-0 opacity-90 lh-lg">
+          Track spending, budgets, and trends in one calm dashboard — your data stays in your stack.
+        </p>
+      </div>
+      <div class="col-lg-7 px-4 px-md-5 py-5">
+        <div class="mb-4 text-center text-lg-start">
+          <div class="pw-auth-badge d-lg-none mx-auto">◇</div>
+          <h2 class="pw-page-title h3 mb-2">Sign in</h2>
+          <p class="pw-page-sub mb-0 small">Use the same account you created for PennyWise.</p>
+        </div>
+        <form method="POST" class="needs-validation" novalidate>
           <div class="mb-3">
-            <label class="form-label">Username</label>
-            <input type="text" name="username" class="form-control" required autofocus />
+            <label class="form-label fw-medium" for="login-username">Username</label>
+            <input id="login-username" type="text" name="username" class="form-control form-control-lg" required autofocus autocomplete="username" placeholder="you" />
           </div>
-          <div class="mb-3">
-            <label class="form-label">Password</label>
-            <input type="password" name="password" class="form-control" required />
+          <div class="mb-4">
+            <label class="form-label fw-medium" for="login-password">Password</label>
+            <input id="login-password" type="password" name="password" class="form-control form-control-lg" required autocomplete="current-password" />
           </div>
-          <button type="submit" class="btn btn-primary w-100">Login</button>
+          <button type="submit" class="btn btn-lg w-100 text-white pw-btn-primary-gradient">Continue</button>
         </form>
-        <hr />
-        <p class="text-center mb-0">No account? <a href="{{ url_for('register') }}">Register</a></p>
+        <p class="text-center text-muted small mt-4 mb-0 pw-link-muted">
+          New here? <a href="{{ url_for('register') }}">Create an account</a>
+        </p>
       </div>
     </div>
   </div>
