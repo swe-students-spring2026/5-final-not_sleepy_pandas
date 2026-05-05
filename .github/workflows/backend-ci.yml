@@ -68,6 +68,7 @@ jobs:
             docker run -d --name pennywise-backend \
               --network pennywise-net \
               -p 5000:5000 \
+              -e PORT=5000 \
               -e MONGO_URI=${{ secrets.MONGO_URI }} \
               -e MONGO_DB_NAME=pennywise \
               -e JWT_SECRET=${{ secrets.JWT_SECRET }} \
