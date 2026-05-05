@@ -4,33 +4,64 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>PennyWise{% block title %}{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
 </head>
-<body>
+<body class="pw-body {% block body_class %}{% endblock %}">
 {% if session.username %}
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark px-3">
-  <a class="navbar-brand fw-bold" href="{{ url_for('dashboard') }}">💰 PennyWise</a>
-  <div class="navbar-nav ms-auto">
-    <a class="nav-link" href="{{ url_for('dashboard') }}">Dashboard</a>
-    <a class="nav-link" href="{{ url_for('transactions') }}">Transactions</a>
-    <a class="nav-link" href="{{ url_for('budgets') }}">Budgets</a>
-    <a class="nav-link text-warning" href="{{ url_for('logout') }}">Logout ({{ session.username }})</a>
+<nav class="navbar navbar-expand-lg navbar-dark pw-nav px-3 py-3 shadow-sm">
+  <div class="container-fluid px-lg-4">
+    <a class="navbar-brand d-flex align-items-center gap-2 fw-bold" href="{{ url_for('dashboard') }}">
+      <span class="pw-logo" aria-hidden="true">◇</span>
+      <span>PennyWise</span>
+    </a>
+    <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#pwNavCollapse" aria-controls="pwNavCollapse" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse mt-3 mt-lg-0" id="pwNavCollapse">
+      <ul class="navbar-nav ms-auto gap-lg-1 align-items-lg-center fw-medium">
+        <li class="nav-item">
+          <a class="nav-link px-3 rounded-pill pw-nav-link" href="{{ url_for('dashboard') }}">Dashboard</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link px-3 rounded-pill pw-nav-link" href="{{ url_for('transactions') }}">Transactions</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link px-3 rounded-pill pw-nav-link" href="{{ url_for('budgets') }}">Budgets</a>
+        </li>
+        <li class="nav-item ms-lg-2">
+          <a class="nav-link btn btn-outline-light btn-sm px-3 rounded-pill d-inline-flex align-items-center pw-logout-btn" href="{{ url_for('logout') }}">
+            Sign out · <span class="ms-1 fw-semibold pw-nav-user">{{ session.username }}</span>
+          </a>
+        </li>
+      </ul>
+    </div>
   </div>
 </nav>
 {% endif %}
 
-<div class="container mt-4">
-  {% with messages = get_flashed_messages(with_categories=true) %}
-    {% for cat, msg in messages %}
-      <div class="alert alert-{{ cat }} alert-dismissible fade show" role="alert">
-        {{ msg }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-      </div>
-    {% endfor %}
-  {% endwith %}
-  {% block content %}{% endblock %}
-</div>
+<main class="{% if session.username %}pw-main{% else %}pw-auth-main{% endif %}">
+  <div class="{% if session.username %}container pb-5{% else %}w-100{% endif %} {% if session.username %}px-3 px-lg-4 mt-4{% endif %}">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in messages %}
+        <div class="alert alert-{{ cat }} alert-dismissible fade show" role="alert">
+          {{ msg }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+      {% endfor %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </div>
+</main>
+
+{% if not session.username %}
+<footer class="pw-auth-footer text-center py-4 small text-white-50">
+  PennyWise · personal finance, kept simple.
+</footer>
+{% endif %}
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>

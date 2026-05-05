@@ -2,60 +2,115 @@
 {% block title %} — Dashboard{% endblock %}
 
 {% block content %}
-<h2 class="mb-4">Dashboard</h2>
+{# Initialize namespace with default values to prevent formatting errors #}
+{% set ns = namespace(last_net=0, last_income=0, last_exp=0, has_data=false) %}
+
+{% if monthly and monthly|length > 0 %}
+  {% set sorted_m = monthly|sort(attribute='month', reverse=true) %}
+  {% if sorted_m[0] is defined %}
+    {% set ns.last_net = sorted_m[0].net | default(0) %}
+    {% set ns.last_income = sorted_m[0].income | default(0) %}
+    {% set ns.last_exp = sorted_m[0].expense | default(0) %}
+    {% set ns.has_data = true %}
+  {% endif %}
+{% endif %}
+
+<div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3 mb-4">
+  <div>
+    <h1 class="pw-page-title h3 mb-1">Dashboard</h1>
+    <p class="pw-page-sub mb-0 small">Monthly summary from your ledger, plus charts from live analytics.</p>
+  </div>
+</div>
+
+{% if ns.has_data %}
+<div class="row g-3 mb-4">
+  <div class="col-sm-4">
+    <div class="pw-stat h-100">
+      <div class="pw-stat-label">Latest month net</div>
+      <div class="pw-stat-value {{ 'text-success' if ns.last_net >= 0 else 'text-danger' }}">
+        ${{ "%.2f"|format(ns.last_net) }}
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-4">
+    <div class="pw-stat h-100">
+      <div class="pw-stat-label">Income (latest)</div>
+      <div class="pw-stat-value text-success">${{ "%.2f"|format(ns.last_income) }}</div>
+    </div>
+  </div>
+  <div class="col-sm-4">
+    <div class="pw-stat h-100">
+      <div class="pw-stat-label">Expenses (latest)</div>
+      <div class="pw-stat-value text-danger">${{ "%.2f"|format(ns.last_exp) }}</div>
+    </div>
+  </div>
+</div>
+{% endif %}
 
 <div class="row g-4">
-  <!-- Monthly Summary Table -->
   <div class="col-lg-6">
-    <div class="card h-100">
-      <div class="card-header fw-semibold">Monthly Summary</div>
-      <div class="card-body">
+    <div class="card pw-card h-100">
+      <div class="card-header pw-card-header border-0">Monthly summary</div>
+      <div class="card-body pw-card-body">
         {% if monthly %}
-        <table class="table table-sm table-striped">
-          <thead><tr><th>Month</th><th>Income</th><th>Expense</th><th>Net</th></tr></thead>
-          <tbody>
-          {% for row in monthly %}
-          <tr>
-            <td>{{ row.month }}</td>
-            <td class="text-success">+${{ "%.2f"|format(row.income) }}</td>
-            <td class="text-danger">-${{ "%.2f"|format(row.expense) }}</td>
-            <td class="{{ 'text-success' if row.net >= 0 else 'text-danger' }}">
-              ${{ "%.2f"|format(row.net) }}
-            </td>
-          </tr>
-          {% endfor %}
-          </tbody>
-        </table>
+        <div class="table-responsive pw-table-wrap">
+          <table class="table table-sm pw-table mb-0">
+            <thead>
+              <tr>
+                <th>Month</th>
+                <th class="text-end">Income</th>
+                <th class="text-end">Expense</th>
+                <th class="text-end">Net</th>
+              </tr>
+            </thead>
+            <tbody>
+            {% for row in monthly|sort(attribute='month', reverse=true) %}
+            <tr>
+              <td class="fw-medium">{{ row.month }}</td>
+              <td class="text-end text-success">+${{ "%.2f"|format(row.income|default(0)) }}</td>
+              <td class="text-end text-danger">-${{ "%.2f"|format(row.expense|default(0)) }}</td>
+              <td class="text-end fw-semibold {{ 'text-success' if row.net >= 0 else 'text-danger' }}">
+                ${{ "%.2f"|format(row.net|default(0)) }}
+              </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
         {% else %}
-        <p class="text-muted">No data yet.</p>
+        <div class="pw-empty">
+          <p class="mb-0"><strong>No summary rows yet.</strong> Add income and expenses on the Transactions page.</p>
+        </div>
         {% endif %}
       </div>
     </div>
   </div>
 
-  <!-- Top Categories Doughnut -->
   <div class="col-lg-6">
-    <div class="card h-100">
-      <div class="card-header fw-semibold">Top Spending Categories</div>
-      <div class="card-body d-flex justify-content-center align-items-center">
+    <div class="card pw-card h-100">
+      <div class="card-header pw-card-header border-0">Top spending categories</div>
+      <div class="card-body pw-card-body d-flex flex-column justify-content-center align-items-center min-h-chart">
         {% if categories %}
-        <canvas id="categoryChart" style="max-height:260px"></canvas>
+        <canvas id="categoryChart" class="w-100" style="max-height:280px"></canvas>
         {% else %}
-        <p class="text-muted">No expense data yet.</p>
+        <div class="pw-empty w-100">
+          <p class="mb-0">No expense categories to chart yet.</p>
+        </div>
         {% endif %}
       </div>
     </div>
   </div>
 
-  <!-- Spending Trends Bar Chart -->
   <div class="col-12">
-    <div class="card">
-      <div class="card-header fw-semibold">Month-over-Month Spending Trend</div>
-      <div class="card-body">
+    <div class="card pw-card">
+      <div class="card-header pw-card-header border-0">Month-over-month spending</div>
+      <div class="card-body pw-card-body">
         {% if trends %}
-        <canvas id="trendsChart" style="max-height:220px"></canvas>
+        <canvas id="trendsChart" class="w-100" style="max-height:260px"></canvas>
         {% else %}
-        <p class="text-muted">No trend data yet.</p>
+        <div class="pw-empty">
+          <p class="mb-0">Trend data appears after you have spending across multiple months.</p>
+        </div>
         {% endif %}
       </div>
     </div>
@@ -66,34 +121,59 @@
 {% block scripts %}
 {% if categories %}
 <script>
-const catCtx = document.getElementById('categoryChart');
-new Chart(catCtx, {
-  type: 'doughnut',
-  data: {
-    labels: {{ categories | map(attribute='category') | list | tojson }},
-    datasets: [{
-      data: {{ categories | map(attribute='total_spent') | list | tojson }},
-      backgroundColor: ['#4e73df','#1cc88a','#36b9cc','#f6c23e','#e74a3b','#858796'],
-    }]
-  }
-});
+  // Use |tojson|safe to ensure JS receives a valid array/object
+  const catLabels = {{ categories | map(attribute='category') | list | tojson | safe }};
+  const catData = {{ categories | map(attribute='total_spent') | list | tojson | safe }};
+  
+  const catCtx = document.getElementById('categoryChart');
+  const palette = ['#0d9488', '#14b8a6', '#2dd4bf', '#5eead4', '#f59e0b', '#f43f5e'];
+  
+  new Chart(catCtx, {
+    type: 'doughnut',
+    data: {
+      labels: catLabels,
+      datasets: [{
+        data: catData,
+        backgroundColor: palette,
+        borderWidth: 0,
+      }]
+    },
+    options: {
+      plugins: { 
+        legend: { position: 'bottom', labels: { padding: 16, usePointStyle: true } } 
+      },
+      cutout: '58%',
+    }
+  });
 </script>
 {% endif %}
+
 {% if trends %}
 <script>
-const tCtx = document.getElementById('trendsChart');
-new Chart(tCtx, {
-  type: 'bar',
-  data: {
-    labels: {{ trends | map(attribute='month') | list | tojson }},
-    datasets: [{
-      label: 'Total Spent ($)',
-      data: {{ trends | map(attribute='total_spent') | list | tojson }},
-      backgroundColor: '#4e73df',
-    }]
-  },
-  options: { scales: { y: { beginAtZero: true } } }
-});
+  const trendLabels = {{ trends | map(attribute='month') | list | tojson | safe }};
+  const trendData = {{ trends | map(attribute='total_spent') | list | tojson | safe }};
+  
+  const tCtx = document.getElementById('trendsChart');
+  new Chart(tCtx, {
+    type: 'bar',
+    data: {
+      labels: trendLabels,
+      datasets: [{
+        label: 'Total spent ($)',
+        data: trendData,
+        backgroundColor: 'rgba(13, 148, 136, 0.55)',
+        borderRadius: 8,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { display: false } },
+        y: { beginAtZero: true, grid: { color: 'rgba(15, 23, 42, 0.06)' } }
+      }
+    }
+  });
 </script>
 {% endif %}
 {% endblock %}

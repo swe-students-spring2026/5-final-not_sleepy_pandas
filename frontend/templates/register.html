@@ -1,29 +1,42 @@
 {% extends "base.html" %}
 {% block title %} — Register{% endblock %}
+{% block body_class %}pw-auth-layout{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-  <div class="col-md-4">
-    <div class="card shadow-sm">
-      <div class="card-body p-4">
-        <h2 class="card-title text-center mb-4">Create Account</h2>
-        <form method="POST">
+<div class="row justify-content-center align-items-center w-100 mw-100 m-0">
+  <div class="col-md-11 col-lg-10 col-xl-8">
+    <div class="row g-4 g-lg-5 align-items-center shadow-lg rounded-4 overflow-hidden bg-white mw-100 m-0">
+      <div class="col-lg-5 d-none d-lg-flex flex-column justify-content-center text-white px-5 py-5 pw-auth-sidebar">
+        <div class="pw-auth-badge-lg mb-4">◇</div>
+        <h1 class="h3 fw-bold mb-3">Start in minutes</h1>
+        <p class="mb-0 opacity-90 lh-lg">
+          Register once, then add transactions and budgets — the API stores everything in MongoDB.
+        </p>
+      </div>
+      <div class="col-lg-7 px-4 px-md-5 py-5">
+        <div class="mb-4 text-center text-lg-start">
+          <div class="pw-auth-badge d-lg-none mx-auto">◇</div>
+          <h2 class="pw-page-title h3 mb-2">Create Account</h2>
+          <p class="pw-page-sub mb-0 small">Pick a username and password. Email is optional.</p>
+        </div>
+        <form method="POST" class="needs-validation" novalidate>
           <div class="mb-3">
-            <label class="form-label">Username</label>
-            <input type="text" name="username" class="form-control" required autofocus />
+            <label class="form-label fw-medium" for="reg-username">Username</label>
+            <input id="reg-username" type="text" name="username" class="form-control form-control-lg" required autofocus autocomplete="username" minlength="3" placeholder="min. 3 characters" />
           </div>
           <div class="mb-3">
-            <label class="form-label">Email (optional)</label>
-            <input type="email" name="email" class="form-control" />
+            <label class="form-label fw-medium" for="reg-email">Email <span class="text-muted fw-normal">(optional)</span></label>
+            <input id="reg-email" type="email" name="email" class="form-control" autocomplete="email" placeholder="you@example.com" />
           </div>
-          <div class="mb-3">
-            <label class="form-label">Password</label>
-            <input type="password" name="password" class="form-control" required />
+          <div class="mb-4">
+            <label class="form-label fw-medium" for="reg-password">Password</label>
+            <input id="reg-password" type="password" name="password" class="form-control form-control-lg" required autocomplete="new-password" />
           </div>
-          <button type="submit" class="btn btn-success w-100">Register</button>
+          <button type="submit" class="btn btn-lg w-100 text-white pw-btn-primary-gradient">Create account</button>
         </form>
-        <hr />
-        <p class="text-center mb-0">Have an account? <a href="{{ url_for('login') }}">Login</a></p>
+        <p class="text-center text-muted small mt-4 mb-0 pw-link-muted">
+          Already registered? <a href="{{ url_for('login') }}">Sign in</a>
+        </p>
       </div>
     </div>
   </div>
