@@ -29,17 +29,49 @@ A personal finance tracker that helps users manage their money by tracking incom
 
 ## Live Deployment
 
-- [Web App](http://YOUR_DROPLET_IP:3000)
+- [Web App](http://159.89.235.26:3000)
 
-Deployed on DigitalOcean via Docker Hub images and GitHub Actions CI/CD.
+Deployed on a DigitalOcean Droplet. On every push to `main`, GitHub Actions builds and pushes Docker images to Docker Hub, then SSHes into the Droplet and pulls the latest images.
 
 ---
 
 ## Docker Hub Images
 
-- [Backend](https://hub.docker.com/r/YOUR_USERNAME/pennywise-backend)
-- [Frontend](https://hub.docker.com/r/YOUR_USERNAME/pennywise-frontend)
-- [Database](https://hub.docker.com/r/YOUR_USERNAME/pennywise-database)
+- [Backend](https://hub.docker.com/r/hansonh18/pennywise-backend)
+- [Frontend](https://hub.docker.com/r/hansonh18/pennywise-frontend)
+- [Database](https://hub.docker.com/r/hansonh18/pennywise-database)
+
+---
+
+## CI/CD Pipeline
+
+Each subsystem has its own GitHub Actions workflow in `.github/workflows/`:
+
+| Workflow | Trigger | Jobs |
+|---|---|---|
+| `backend-ci.yml` | push/PR to `backend/**` | test → build+push → deploy |
+| `frontend-ci.yml` | push/PR to `frontend/**` | test → build+push → deploy |
+| `database-ci.yml` | push/PR to `database/**` | test → build+push → deploy |
+
+Build and deploy steps only run on merges to `main`. Required secrets: `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN`, `DO_HOST`, `DO_USER`, `DO_SSH_KEY`, `MONGO_URI`, `JWT_SECRET`, `FLASK_SECRET`.
+
+---
+
+## Environment Setup
+
+Copy `.env.example` to `.env` and fill in your values:
+
+```bash
+cp .env.example .env
+```
+
+| Variable | Default | Description |
+|---|---|---|
+| `MONGO_URI` | `mongodb://localhost:27017` | MongoDB connection string (`mongodb://mongodb:27017` inside Docker) |
+| `MONGO_DB_NAME` | `pennywise` | Database name |
+| `JWT_SECRET` | `dev-secret-change-in-prod` | Secret key for signing JWT tokens — change in production |
+| `BACKEND_URL` | `http://backend:5000` | URL the frontend uses to reach the backend |
+| `FLASK_SECRET` | `dev-frontend-secret` | Flask session cookie key |
 
 ---
 
